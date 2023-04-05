@@ -33,12 +33,17 @@ DHT dht(DHTPin, DHTTYPE);
 
 LiquidCrystal lcd(5, 4, 2, 14, 12, 13); // Creates an LC object. Parameters: (rs, enable, d4, d5, d6, d8)
 
+unsigned long previous_time = 0;
+unsigned long delay_time = 20000;
+
 void setup() {
   Serial.begin(9600);
-  Serial.println();
+//  Serial.println();
 
-  pinMode(LED_BUILTIN, OUTPUT); // no need, remove led
-  digitalWrite(LED_BUILTIN, HIGH); // no need, remove led
+//  pinMode(LED_BUILTIN, OUTPUT); // no need, remove led
+//  digitalWrite(LED_BUILTIN, HIGH); // no need, remove led
+
+  WiFi.disconnect(true);
 
   dht.begin();
 
@@ -78,23 +83,40 @@ void setup() {
 }
 
 void loop() {
+  unsigned long current_time = millis();
+
+  if ((WiFi.status() != WL_CONNECTED) && (current_time - previous_time >= delay_time)) {
+    Serial.println(millis());
+    Serial.println("Reconnecting to WiFi");
+    WiFi.disconnect();
+    WiFi.reconnect();
+    previous_time = current_time;
+  }
+
   // Store measured value into point
   sensor.clearFields();
   // Report RSSI of currently connected network
   sensor.addField("rssi", WiFi.RSSI());
 
-  float dht22_temperature = dht.readTemperature();
-  float dht22_humidity = dht.readHumidity();
+  double dht22_temperature = dht.readTemperature();
+  double dht22_humidity = dht.readHumidity();
 
   lcd.clear();
+
   lcd.setCursor(0,0);
-  lcd.print("C°: ");
-  lcd.setCursor(4, 0);
-  lcd.print(dht22_temperature);
+  lcd.print("T:");
+  lcd.print(millis());
+
   lcd.setCursor(0,1);
+  lcd.print("C");
+  lcd.print((char)223);
+  lcd.print(": ");
+  lcd.setCursor(3, 1);
+  lcd.print(dht22_temperature, 1);
+  lcd.setCursor(9,1);
   lcd.print("H%: ");
-  lcd.setCursor(4, 1);
-  lcd.print(dht22_humidity);
+  lcd.setCursor(12, 1);
+  lcd.print(dht22_humidity), 1;
 
   if(isnan(dht22_temperature)) {
     Serial.println("Read Failure DHT22 Temperature!");
